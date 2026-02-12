@@ -21,7 +21,7 @@ type Data struct {
 	supportVectors       []types.SupportVector
 }
 
-type Cycle []*types.Edge
+type Cycle []*types.Point
 
 func CalculateCycles(jsonObj string) ([]Cycle, error) {
 	// 1. Initialization step
@@ -33,23 +33,32 @@ func CalculateCycles(jsonObj string) ([]Cycle, error) {
 	// 2. Iteration step
 	supportVectorSize := len(data.edges)
 	supportVectors := getSupportVectors(data.nonSpanningTreeEdges, len(data.points), data.edges)
-	cycles := make([]Cycle, len(supportVectors))
+	cyclesOfEdges := make([][]*types.Edge, len(supportVectors))
 	shift := len(data.points)
-	for k := 0; k < len(cycles); k++ {
+	for k := 0; k < len(cyclesOfEdges); k++ {
 		supportVector := supportVectors[k]
 		doubledGraph := createDoubledGraph(data.graph, data.edges, supportVector)
 		for pointNumber := range data.points {
 			cycle := getCycle(doubledGraph, pointNumber, shift+pointNumber)
-			if cycles[k] == nil || len(cycles[k]) > len(cycle) {
-				cycles[k] = cycle
+			if cyclesOfEdges[k] == nil || len(cyclesOfEdges[k]) > len(cycle) {
+				cyclesOfEdges[k] = cycle
 			}
 		}
 		for j := k + 1; j < len(supportVectors); j++ {
-			cycleSupportVector := turnCycleIntoSupportVector(cycles[k], supportVectorSize)
+			cycleSupportVector := turnCycleIntoSupportVector(cyclesOfEdges[k], supportVectorSize)
 			if testScalarMultiplication(cycleSupportVector, supportVectors[j]) {
 				supportVectors[j] = supportVectors[j].XOR(supportVectors[k])
 			}
 		}
+	}
+
+	cycles := make([]Cycle, len(cyclesOfEdges))
+	for i, cycleOfEdges := range cyclesOfEdges {
+		cycles[i] = turnCyclesOfEdgesIntoCycle(cycleOfEdges, data.points)
+	}
+
+	if err := reduce(cycles); err != nil {
+		return make([]Cycle, 0), err
 	}
 
 	return cycles, nil
@@ -64,7 +73,7 @@ func initialize(jsonObj string) (*Data, error) {
 	dfs := algs.MakeDFS(graphJson.Points, graphJson.Graph)
 	spanningTree := dfs.Traverse(0)
 	// 2. Get all the edges that are not in the spanning tree
-	nonSpanningTreeEdges := getNonSpanningTreeEdges(spanningTree, graphJson.Edges, graphJson.Graph)
+	nonSpanningTreeEdges := getNonSpanningTreeEdges(spanningTree, graphJson.Edges)
 	// 3. Get support vectors
 	supportVectors := getSupportVectors(nonSpanningTreeEdges, len(graphJson.Points), graphJson.Edges)
 	return &Data{graphJson.Points, graphJson.Edges, graphJson.Graph, spanningTree, nonSpanningTreeEdges, supportVectors}, nil
@@ -78,10 +87,10 @@ func MakeGraphSmall() *GraphJson {
 		  0 1
 	*/
 	points := []*types.Point{
-		types.NewPoint(0, 0, 0),
-		types.NewPoint(0, 1, 0),
-		types.NewPoint(1, 1, 0),
-		types.NewPoint(1, 0, 0),
+		types.NewPoint(0, 0, 0, 0),
+		types.NewPoint(1, 0, 1, 0),
+		types.NewPoint(2, 1, 1, 0),
+		types.NewPoint(3, 1, 0, 0),
 	}
 	edges := []*types.Edge{
 		{Number: 0, Edge: [2]int{0, 1}},
@@ -105,7 +114,7 @@ func parseJson(jsonObj string) (*GraphJson, error) {
 	if err := json.Unmarshal([]byte(jsonObj), &v); err == nil {
 		graphJson := NewGraphJson(make([]*types.Point, len(v.Atoms)), make([]*types.Edge, len(v.Bonds)), make(data_structs.Graph, len(v.Atoms)))
 		for i, atom := range v.Atoms {
-			graphJson.Points[i] = types.NewPoint(atom.X, atom.Y, atom.Z)
+			graphJson.Points[i] = types.NewPoint(i, atom.X, atom.Y, atom.Z)
 		}
 		for i, bond := range v.Bonds {
 			graphJson.Edges[i] = &types.Edge{
@@ -132,7 +141,7 @@ func makeGraph(edges []*types.Edge, pointCount int) data_structs.Graph {
 	return graph
 }
 
-func getNonSpanningTreeEdges(spanningTreeEdges types.Path, edges []*types.Edge, graph data_structs.Graph) []*types.Edge {
+func getNonSpanningTreeEdges(spanningTreeEdges types.Path, edges []*types.Edge) []*types.Edge {
 	nonSpanningTreeEdges := make([]*types.Edge, 0)
 	for _, edge := range edges {
 		if !slices.ContainsFunc(spanningTreeEdges, func(e *types.Edge) bool {
@@ -143,14 +152,6 @@ func getNonSpanningTreeEdges(spanningTreeEdges types.Path, edges []*types.Edge, 
 	}
 	return nonSpanningTreeEdges
 }
-
-// func splitSpanningTreeIntoEdges(spanningTree types.Path, graph data_structs.Graph) []*types.Edge {
-// 	edges := make([]*types.Edge, len(spanningTree)-1)
-// 	for i := 0; i < len(spanningTree)-1; i++ {
-// 		edges[i] = graph[spanningTree[i]][spanningTree[i+1]]
-// 	}
-// 	return edges
-// }
 
 func getSupportVectors(nonSpanningTreeEdges []*types.Edge, pointsCount int, edges []*types.Edge) []types.SupportVector {
 	edgesCount := len(edges)
@@ -247,4 +248,39 @@ func turnCycleIntoSupportVector(cycle []*types.Edge, cycleSize int) types.Suppor
 
 func testScalarMultiplication(cycleSupportVector, supportVector types.SupportVector) bool {
 	return cycleSupportVector.GetScalarMultiplication(supportVector)%2 == 1
+}
+
+func turnCyclesOfEdgesIntoCycle(cycleOfEdges []*types.Edge, points []*types.Point) Cycle {
+	if len(cycleOfEdges) < 3 {
+		return make(Cycle, 0)
+	}
+
+	cycle := make(Cycle, len(cycleOfEdges))
+	currentPoint := 0
+	prevCommonPointNumber := intersection(cycleOfEdges[0].Edge, cycleOfEdges[1].Edge)
+	cycle[currentPoint] = points[cycleOfEdges[0].GetOtherSide(prevCommonPointNumber)]
+	currentPoint++
+
+	for ; currentPoint < len(cycleOfEdges)-1; currentPoint++ {
+		cycle[currentPoint] = points[prevCommonPointNumber]
+		prevCommonPointNumber = intersection(cycleOfEdges[currentPoint].Edge, cycleOfEdges[currentPoint+1].Edge)
+	}
+	cycle[currentPoint] = points[prevCommonPointNumber]
+	return cycle
+}
+
+func intersection(slice1, slice2 [2]int) int {
+	if slice1[0] == slice2[0] {
+		return slice1[0]
+	} else if slice1[1] == slice2[0] {
+		return slice1[1]
+	} else if slice1[0] == slice2[1] {
+		return slice1[0]
+	} else {
+		return slice1[1]
+	}
+}
+
+func reduce(cycles []Cycle) error {
+	panic("unimplemented")
 }

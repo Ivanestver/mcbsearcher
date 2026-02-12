@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	lammps_parser "github.com/Ivanestver/lammps-file-parser/parser"
+	deserializer "github.com/Ivanestver/lammps-file-parser/deserialize"
 )
 
 func main() {
@@ -24,7 +24,7 @@ func main() {
 		fmt.Println(err.Error())
 		return
 	}
-	lammpsStruct, err := lammps_parser.Parse(
+	lammpsStruct, err := deserializer.Deserialize(
 		string(content),
 		*infilePtr)
 	if err != nil {

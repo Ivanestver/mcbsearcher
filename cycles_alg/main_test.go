@@ -97,7 +97,7 @@ func TestGetNonSpanningTreeEdges(t *testing.T) {
 func getRealNonSpanningTreeEdges() []*types.Edge {
 	spanningTree := getTestSpanningTree()
 	graphJson := makeTestGraph()
-	return getNonSpanningTreeEdges(spanningTree, graphJson.Edges, graphJson.Graph)
+	return getNonSpanningTreeEdges(spanningTree, graphJson.Edges)
 }
 
 func TestGetSupportVectors(t *testing.T) {
@@ -187,10 +187,10 @@ func makeTestGraph() *GraphJson {
 		  0 1
 	*/
 	points := []*types.Point{
-		types.NewPoint(0, 0, 0),
-		types.NewPoint(0, 1, 0),
-		types.NewPoint(1, 1, 0),
-		types.NewPoint(1, 0, 0),
+		types.NewPoint(0, 0, 0, 0),
+		types.NewPoint(1, 0, 1, 0),
+		types.NewPoint(2, 1, 1, 0),
+		types.NewPoint(3, 1, 0, 0),
 	}
 	edges := []*types.Edge{
 		{Number: 0, Edge: [2]int{0, 1}},
@@ -296,10 +296,10 @@ func makeGraphSmall() *GraphJson {
 		  0 1
 	*/
 	points := []*types.Point{
-		types.NewPoint(0, 0, 0),
-		types.NewPoint(0, 1, 0),
-		types.NewPoint(1, 1, 0),
-		types.NewPoint(1, 0, 0),
+		types.NewPoint(0, 0, 0, 0),
+		types.NewPoint(1, 0, 1, 0),
+		types.NewPoint(2, 1, 1, 0),
+		types.NewPoint(3, 1, 0, 0),
 	}
 	edges := []*types.Edge{
 		{Number: 0, Edge: [2]int{0, 1}},
@@ -328,15 +328,15 @@ func makeGraphBig() ([]*types.Point, []*types.Edge, data_structs.Graph) {
 		  0-1-2
 	*/
 	points := []*types.Point{
-		types.NewPoint(0, 0, 0),
-		types.NewPoint(1, 0, 0),
-		types.NewPoint(2, 0, 0),
-		types.NewPoint(0, 1, 0),
-		types.NewPoint(1, 1, 0),
-		types.NewPoint(2, 1, 0),
-		types.NewPoint(0, 2, 0),
-		types.NewPoint(1, 2, 0),
-		types.NewPoint(2, 2, 0),
+		types.NewPoint(0, 0, 0, 0),
+		types.NewPoint(1, 1, 0, 0),
+		types.NewPoint(2, 2, 0, 0),
+		types.NewPoint(3, 0, 1, 0),
+		types.NewPoint(4, 1, 1, 0),
+		types.NewPoint(5, 2, 1, 0),
+		types.NewPoint(6, 0, 2, 0),
+		types.NewPoint(7, 1, 2, 0),
+		types.NewPoint(8, 2, 2, 0),
 	}
 
 	edges := []*types.Edge{

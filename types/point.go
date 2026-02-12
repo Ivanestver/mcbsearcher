@@ -3,6 +3,7 @@ package types
 import "math"
 
 type Point struct {
+	PointID int
 	X, Y, Z float64
 	State   State
 }
@@ -14,11 +15,12 @@ func (point *Point) GetDistanceTo(other *Point) float64 {
 			(point.Z-other.Z)*(point.Z*other.Z))
 }
 
-func NewPoint(X, Y, Z float64) *Point {
+func NewPoint(pointID int, X, Y, Z float64) *Point {
 	return &Point{
-		X:     X,
-		Y:     Y,
-		Z:     Z,
-		State: STATE_WHITE,
+		PointID: pointID,
+		X:       X,
+		Y:       Y,
+		Z:       Z,
+		State:   STATE_WHITE,
 	}
 }
