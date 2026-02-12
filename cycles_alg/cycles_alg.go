@@ -57,10 +57,6 @@ func CalculateCycles(jsonObj string) ([]Cycle, error) {
 		cycles[i] = turnCyclesOfEdgesIntoCycle(cycleOfEdges, data.points)
 	}
 
-	if err := reduce(cycles); err != nil {
-		return make([]Cycle, 0), err
-	}
-
 	return cycles, nil
 }
 
@@ -279,8 +275,4 @@ func intersection(slice1, slice2 [2]int) int {
 	} else {
 		return slice1[1]
 	}
-}
-
-func reduce(cycles []Cycle) error {
-	panic("unimplemented")
 }
